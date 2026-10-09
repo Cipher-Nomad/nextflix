@@ -1,0 +1,1011 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="description" content="Upload your Netflix viewing history and pick tonight's watch in a few head-to-head rounds.">
+<title>Nextflix</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700;12..96,800&family=Figtree:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: one narrow column of steps (load → tune → duel → verdict); the duel puts the held pick and the challenger side by side, stacked on phones. */
+:root{
+  --bg:#eef0f4; --surface:#ffffff; --sunk:#e3e6ee; --line:#cdd2de;
+  --fg:#161a26; --muted:#5b6274;
+  --amber:#b4650a; --amber-soft:#f6e3c8; --teal:#0f7a74; --teal-soft:#d3ece9;
+  --danger:#a2352d;
+  --f-display:"Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --f-body:"Figtree", "Segoe UI", system-ui, -apple-system, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SF Mono", Menlo, monospace;
+  --r:14px;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0e1120; --surface:#171b2e; --sunk:#0a0d19; --line:#2a3049;
+  --fg:#e9ebf3; --muted:#9aa1b8;
+  --amber:#f0aa4a; --amber-soft:#3a2a14; --teal:#4cc3b9; --teal-soft:#12302e;
+  --danger:#ef8a80; color-scheme:dark;
+}}
+:root[data-theme="dark"]{
+  --bg:#0e1120; --surface:#171b2e; --sunk:#0a0d19; --line:#2a3049;
+  --fg:#e9ebf3; --muted:#9aa1b8;
+  --amber:#f0aa4a; --amber-soft:#3a2a14; --teal:#4cc3b9; --teal-soft:#12302e;
+  --danger:#ef8a80; color-scheme:dark;
+}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+img{max-width:100%}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+body{margin:0;background:var(--bg);color:var(--fg);font:16px/1.55 var(--f-body);padding-inline:16px;padding-block:20px 48px}
+.wrap{max-width:880px;margin:0 auto;display:flex;flex-direction:column;gap:28px}
+h1,h2,h3{font-family:var(--f-display);margin:0;text-wrap:balance;line-height:1.1}
+h1{font-size:clamp(2rem,6vw,3.1rem);font-weight:800;letter-spacing:-.02em}
+h2{font-size:1.45rem;font-weight:700}
+h3{font-size:1.05rem;font-weight:700}
+p{margin:0}
+.muted{color:var(--muted)}
+.mono{font-family:var(--f-mono);font-size:.78rem;letter-spacing:.04em;text-transform:uppercase}
+a{color:var(--teal)}
+button,select,input{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--amber);outline-offset:2px}
+
+header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.brand .mono{color:var(--amber)}
+.steps{display:flex;gap:6px;flex-wrap:wrap}
+.steps span{font-family:var(--f-mono);font-size:.72rem;padding:4px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted)}
+.steps span.on{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+
+.panel{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:22px;display:flex;flex-direction:column;gap:16px}
+.lede{max-width:62ch;font-size:1.06rem}
+
+.btn{border:1px solid var(--line);background:var(--surface);border-radius:10px;padding:10px 16px;cursor:pointer;font-weight:600;display:inline-flex;align-items:center;gap:8px;justify-content:center}
+.btn:hover{border-color:var(--fg)}
+.btn.primary{background:var(--amber);border-color:var(--amber);color:var(--bg)}
+.btn.primary:hover{filter:brightness(1.06)}
+.btn.ghost{background:transparent}
+.btn.small{padding:6px 11px;font-size:.88rem;font-weight:500}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* guide tabs */
+.tabs{display:flex;gap:4px;background:var(--sunk);padding:4px;border-radius:12px;width:fit-content;max-width:100%;flex-wrap:wrap}
+.tabs button{border:0;background:transparent;padding:8px 14px;border-radius:9px;cursor:pointer;font-weight:600;color:var(--muted)}
+.tabs button[aria-selected="true"]{background:var(--surface);color:var(--fg);box-shadow:0 1px 2px rgba(0,0,0,.12)}
+.guide{display:grid;grid-template-columns:1fr;gap:14px}
+.guide ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:8px;max-width:64ch}
+.guide li::marker{font-family:var(--f-mono);color:var(--amber);font-weight:500}
+.kbd{font-family:var(--f-mono);font-size:.86em;background:var(--sunk);padding:1px 6px;border-radius:5px;white-space:nowrap}
+.note{font-size:.92rem;color:var(--muted);border-left:3px solid var(--line);padding-left:12px;max-width:64ch}
+.compare{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:10px}
+.compare div{background:var(--sunk);border-radius:10px;padding:12px 14px;font-size:.92rem}
+.compare b{display:block;font-family:var(--f-display);font-size:1rem;margin-bottom:2px}
+
+.drop{border:2px dashed var(--line);border-radius:var(--r);padding:28px 18px;text-align:center;display:flex;flex-direction:column;gap:10px;align-items:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--amber);background:var(--amber-soft)}
+.drop input{position:absolute;width:1px;height:1px;opacity:0}
+.drop .big{font-family:var(--f-display);font-weight:700;font-size:1.2rem}
+.err{color:var(--danger);font-size:.95rem}
+
+/* review */
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:10px}
+.stat{background:var(--sunk);border-radius:10px;padding:12px 14px}
+.stat b{font-family:var(--f-display);font-size:1.7rem;display:block;font-variant-numeric:tabular-nums;line-height:1.1}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);border-radius:99px;padding:4px 11px;font-size:.88rem;cursor:pointer;background:var(--surface);display:inline-flex;gap:6px;align-items:baseline}
+.chip small{font-family:var(--f-mono);color:var(--muted);font-size:.72rem}
+.chip.w{border-color:var(--teal);background:var(--teal-soft)}
+.chip:hover{border-color:var(--fg)}
+
+/* tune */
+fieldset{border:0;padding:0;margin:0;display:flex;flex-direction:column;gap:8px}
+legend{font-weight:600;margin-bottom:8px;padding:0}
+.opts{display:flex;flex-wrap:wrap;gap:6px}
+.opts label{cursor:pointer}
+.opts input{position:absolute;opacity:0;pointer-events:none}
+.opts span{display:inline-block;padding:7px 13px;border:1px solid var(--line);border-radius:10px;background:var(--surface)}
+.opts input:checked+span{background:var(--fg);color:var(--bg);border-color:var(--fg)}
+.opts input:focus-visible+span{outline:2px solid var(--amber);outline-offset:2px}
+.field{display:flex;flex-direction:column;gap:6px}
+.field input[type=text],select{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;width:100%;max-width:420px}
+.tunegrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:22px}
+
+/* duel */
+.duelhead{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap}
+.meter{display:flex;gap:4px}
+.meter i{width:22px;height:6px;border-radius:3px;background:var(--line)}
+.meter i.done{background:var(--amber)}
+.arena{display:grid;grid-template-columns:1fr auto 1fr;gap:14px;align-items:stretch}
+.vs{align-self:center;font-family:var(--f-display);font-weight:800;color:var(--muted);font-size:1.1rem}
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);display:flex;flex-direction:column;min-width:0;transition:transform .18s,border-color .18s,box-shadow .18s}
+.card.held{border-color:var(--amber);box-shadow:0 0 0 1px var(--amber)}
+.pick{all:unset;cursor:pointer;display:flex;flex-direction:column;gap:10px;padding:18px 18px 12px;flex:1;border-radius:var(--r) var(--r) 0 0}
+.pick:focus-visible{outline:2px solid var(--amber);outline-offset:-2px}
+.card:hover{transform:translateY(-2px);border-color:var(--fg)}
+.badge{font-family:var(--f-mono);font-size:.7rem;letter-spacing:.06em;text-transform:uppercase;padding:3px 8px;border-radius:6px;width:fit-content}
+.badge.held{background:var(--amber-soft);color:var(--amber)}
+.badge.new{background:var(--teal-soft);color:var(--teal)}
+.card h3{font-size:1.5rem;font-weight:800;letter-spacing:-.01em}
+.meta{font-family:var(--f-mono);font-size:.76rem;color:var(--muted);display:flex;flex-wrap:wrap;gap:4px 10px}
+.contrast{font-weight:600;color:var(--teal);font-size:.95rem}
+.why{font-size:.92rem;color:var(--muted);border-top:1px dashed var(--line);padding-top:10px;margin-top:auto}
+.cardfoot{display:flex;gap:6px;padding:10px 14px 14px;flex-wrap:wrap}
+.cardfoot .btn{flex:1;min-width:90px}
+.duelfoot{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.thinking{display:flex;align-items:center;gap:12px;padding:40px 10px;justify-content:center;color:var(--muted);text-align:center;flex-direction:column}
+.reel{width:42px;height:42px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--amber);animation:spin 1s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media (prefers-reduced-motion:reduce){.reel{animation:none}.card{transition:none}}
+
+/* verdict */
+.verdict{border-color:var(--amber);gap:14px}
+.verdict h2{font-size:clamp(1.8rem,5vw,2.6rem);font-weight:800}
+.runners{display:flex;flex-direction:column;gap:8px}
+.runner{display:flex;justify-content:space-between;gap:10px;padding:10px 0;border-top:1px solid var(--line);flex-wrap:wrap}
+.runner b{font-family:var(--f-display)}
+
+/* key */
+.keybox{background:var(--sunk);border-radius:var(--r);padding:16px 18px;display:flex;flex-direction:column;gap:12px}
+.keybox ol{margin:0;padding-left:1.3em;display:flex;flex-direction:column;gap:6px;max-width:64ch}
+.keybox li::marker{font-family:var(--f-mono);color:var(--amber)}
+.keybox input[type=password]{background:var(--surface);border:1px solid var(--line);border-radius:10px;padding:9px 12px;flex:1;min-width:0;font-family:var(--f-mono);font-size:.9rem}
+.keyok{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--teal);display:inline-block}
+.check{display:flex;gap:8px;align-items:center;font-size:.92rem;cursor:pointer}
+
+@media (max-width:640px){
+  .arena{grid-template-columns:1fr}
+  .vs{justify-self:center}
+  .panel{padding:16px}
+  .card h3{font-size:1.3rem}
+}
+</style>
+</head>
+<body>
+
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <div class="mono">Tonight's pick, decided in a few rounds</div>
+      <h1>Nextflix</h1>
+    </div>
+    <nav class="steps" aria-label="Progress">
+      <span data-step="load" class="on">1 · History</span>
+      <span data-step="review">2 · Check</span>
+      <span data-step="tune">3 · Tonight</span>
+      <span data-step="duel">4 · Duel</span>
+    </nav>
+  </header>
+
+  <!-- STEP 1: LOAD -->
+  <section id="s-load" class="panel">
+    <p class="lede">Upload your Netflix viewing history. You'll get two suggestions based on it. Keep the one you prefer and it stays on screen against a new challenger. After a few rounds you'll have your pick.</p>
+
+    <div class="tabs" role="tablist" aria-label="Which export">
+      <button role="tab" id="tab-quick" aria-selected="true" aria-controls="g-quick">Quick history · instant</button>
+      <button role="tab" id="tab-full" aria-selected="false" aria-controls="g-full">Full data · more accurate</button>
+    </div>
+
+    <div id="g-quick" class="guide" role="tabpanel" aria-labelledby="tab-quick">
+      <ol>
+        <li>On a computer or phone <b>browser</b> (not the Netflix app), open <a href="https://www.netflix.com/viewingactivity" target="_blank" rel="noopener">netflix.com/viewingactivity</a> and sign in.</li>
+        <li>If asked, choose your profile. You can also get there from <span class="kbd">Account → Profiles → your profile → Viewing activity</span>.</li>
+        <li>Scroll to the bottom of the list and click <span class="kbd">Download all</span>.</li>
+        <li>You'll get a file called <span class="kbd">NetflixViewingHistory.csv</span>. Upload it below.</li>
+      </ol>
+      <p class="note">This file lists titles and dates only, so it can't tell how much of something you watched. For shows, Nextflix treats two or more episodes as "watched" and a single episode as "tried". You can fix any title on the next screen.</p>
+    </div>
+
+    <div id="g-full" class="guide" role="tabpanel" aria-labelledby="tab-full" hidden>
+      <ol>
+        <li>The account owner opens <a href="https://www.netflix.com/account/getmyinfo" target="_blank" rel="noopener">netflix.com/account/getmyinfo</a> in a browser and submits the request.</li>
+        <li>Confirm it from the email Netflix sends you.</li>
+        <li>Wait for the "your data is ready" email. Netflix says it can take up to 30 days, but it often arrives within a day or two. The download link expires after a couple of weeks.</li>
+        <li>Download and unzip the file. Open the <span class="kbd">CONTENT_INTERACTION</span> folder and upload <span class="kbd">ViewingActivity.csv</span> below.</li>
+      </ol>
+      <p class="note">This file records how long each session lasted, so Nextflix can separate what you finished from what you dropped. It also covers every profile on the account, and you'll choose yours on the next screen. Trailers and previews are ignored.</p>
+    </div>
+
+    <div class="compare" aria-label="Difference between the two files">
+      <div><b>Quick history</b>Ready in seconds. Titles and dates for one profile.</div>
+      <div><b>Full data</b>Takes a day or more. Adds watch time, so "more than half watched" can be checked.</div>
+    </div>
+
+    <label class="drop" id="drop" for="file">
+      <input type="file" id="file" accept=".csv,text/csv">
+      <span class="big">Drop your CSV here or tap to choose</span>
+      <span class="muted">NetflixViewingHistory.csv or ViewingActivity.csv. The file is read in your browser and isn't uploaded anywhere.</span>
+    </label>
+    <p class="err" id="load-err" hidden></p>
+    <div class="row">
+      <button class="btn ghost small" id="use-saved" hidden>Use the history I loaded last time</button>
+      <button class="btn ghost small" id="use-sample">Try it with an example history</button>
+    </div>
+  </section>
+
+  <!-- STEP 2: REVIEW -->
+  <section id="s-review" class="panel" hidden>
+    <div class="row" style="justify-content:space-between">
+      <h2>Here's what we found</h2>
+      <span class="mono muted" id="fmt-label"></span>
+    </div>
+    <p class="err" id="sample-flag" hidden>This is an example history, not your own. Upload your CSV to get real suggestions.</p>
+    <div class="field" id="profile-wrap" hidden>
+      <label for="profile">Whose profile is this for?</label>
+      <select id="profile"></select>
+    </div>
+    <div class="stats" id="stats"></div>
+    <p class="muted">Teal titles count as <b>watched</b> and shape your suggestions. Grey titles were only <b>tried</b>, and Nextflix will steer away from things like them. Tap any title to move it to the other group.</p>
+    <div class="chips" id="chips"></div>
+    <button class="btn ghost small" id="more-chips" hidden></button>
+    <div class="row">
+      <button class="btn primary" id="to-tune">Looks right</button>
+      <button class="btn ghost" id="back-load">Use a different file</button>
+    </div>
+  </section>
+
+  <!-- STEP 3: TUNE -->
+  <section id="s-tune" class="panel" hidden>
+    <h2>What's tonight like?</h2>
+    <div class="tunegrid">
+      <fieldset>
+        <legend>How much time do you have?</legend>
+        <div class="opts" data-name="time">
+          <label><input type="radio" name="time" value="under 45 minutes, so an episode or a short film"><span>Under 45 min</span></label>
+          <label><input type="radio" name="time" value="about two hours" checked><span>About 2 hours</span></label>
+          <label><input type="radio" name="time" value="plenty of time, happy to start a whole series"><span>Starting a series</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Who's watching?</legend>
+        <div class="opts">
+          <label><input type="radio" name="who" value="alone" checked><span>Just me</span></label>
+          <label><input type="radio" name="who" value="with a partner"><span>With a partner</span></label>
+          <label><input type="radio" name="who" value="with family, so keep it suitable for mixed ages"><span>Family</span></label>
+          <label><input type="radio" name="who" value="with friends"><span>Friends</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>What mood?</legend>
+        <div class="opts">
+          <label><input type="radio" name="mood" value="light and easy, something comforting or funny"><span>Light</span></label>
+          <label><input type="radio" name="mood" value="gripping and tense"><span>Gripping</span></label>
+          <label><input type="radio" name="mood" value="heavy, emotional or thought-provoking"><span>Heavy</span></label>
+          <label><input type="radio" name="mood" value="no particular mood, surprise me" checked><span>Surprise me</span></label>
+        </div>
+      </fieldset>
+      <fieldset>
+        <legend>Series or film?</legend>
+        <div class="opts">
+          <label><input type="radio" name="kind" value="series only"><span>Series</span></label>
+          <label><input type="radio" name="kind" value="films only"><span>Film</span></label>
+          <label><input type="radio" name="kind" value="either series or film" checked><span>Either</span></label>
+        </div>
+      </fieldset>
+      <div class="field">
+        <label for="region">Your Netflix country</label>
+        <select id="region"></select>
+        <span class="muted" style="font-size:.88rem">The catalog differs by country.</span>
+      </div>
+      <div class="field">
+        <label for="extra">Anything else? <span class="muted">(optional)</span></label>
+        <input type="text" id="extra" placeholder="e.g. Hindi or English only, nothing too gory">
+      </div>
+    </div>
+    <div class="keybox" id="keybox">
+      <h3>Your free Gemini key</h3>
+      <div id="key-setup">
+        <p class="muted" style="margin-bottom:10px">Suggestions come from Google's Gemini, using your own free quota. You only need to do this once.</p>
+        <ol>
+          <li>Open <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a> and sign in with any Google account.</li>
+          <li>Click <span class="kbd">Create API key</span>. If asked, let it create a new project.</li>
+          <li>Copy the key and paste it here.</li>
+        </ol>
+        <div class="row" style="margin-top:12px">
+          <input type="password" id="key-input" placeholder="Paste your key" autocomplete="off" spellcheck="false" aria-label="Gemini API key">
+          <button class="btn" id="key-save">Connect</button>
+        </div>
+        <label class="check" style="margin-top:10px"><input type="checkbox" id="key-remember" checked> Remember on this device</label>
+      </div>
+      <div class="keyok" id="key-ok" hidden>
+        <span class="dot" aria-hidden="true"></span>
+        <span>Connected · <span class="mono" id="key-model"></span></span>
+        <button class="btn small ghost" id="key-forget">Remove key</button>
+      </div>
+      <p class="err" id="key-err" hidden></p>
+      <p class="note">Your key stays in this browser and is sent only to Google. The free tier has a daily limit per key, and Google may use free-tier requests to improve its products.</p>
+    </div>
+    <p class="err" id="tune-err" hidden></p>
+    <div class="row">
+      <button class="btn primary" id="start">Start the duel</button>
+      <button class="btn ghost" id="back-review">Back</button>
+    </div>
+  </section>
+
+  <!-- STEP 4: DUEL -->
+  <section id="s-duel" class="panel" hidden>
+    <div class="duelhead">
+      <div>
+        <h2 id="duel-title">Which one tonight?</h2>
+        <p class="muted" id="duel-sub">Tap the one you'd rather watch. You can also use the ← → keys.</p>
+      </div>
+      <div class="meter" id="meter" aria-label="Rounds"></div>
+    </div>
+    <div id="arena-wrap"></div>
+    <p class="err" id="duel-err" hidden></p>
+    <div class="duelfoot" id="duel-foot">
+      <button class="btn ghost" id="neither">Neither, show me two others</button>
+      <button class="btn" id="decide">Decide now</button>
+    </div>
+  </section>
+
+  <!-- VERDICT -->
+  <section id="s-verdict" class="panel verdict" hidden></section>
+
+  <p class="muted" style="font-size:.85rem;max-width:70ch">Your history file is read in your browser. Only a short list of title names and your answers are sent to Gemini, with your own key. Gemini doesn't have a live view of the Netflix catalog, so check that a title is available before you settle in. Nextflix isn't made by or connected to Netflix or Google.</p>
+</div>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const ROUNDS = 7;
+  const SAVE_KEY = "nextflix.history.v1";
+
+  const state = {
+    format: null, rows: [], profiles: [], profile: null, isSample: false,
+    titles: [], // {name, kind, eps, mins, last, watched}
+    showAllChips: false,
+    duel: null,
+  };
+
+  /* ---------- CSV ---------- */
+  function parseCSV(text) {
+    text = text.replace(/^﻿/, "");
+    const rows = []; let row = [], cur = "", q = false;
+    for (let i = 0; i < text.length; i++) {
+      const c = text[i];
+      if (q) {
+        if (c === '"') { if (text[i + 1] === '"') { cur += '"'; i++; } else q = false; }
+        else cur += c;
+      } else if (c === '"') q = true;
+      else if (c === ",") { row.push(cur); cur = ""; }
+      else if (c === "\n" || c === "\r") {
+        if (c === "\r" && text[i + 1] === "\n") i++;
+        row.push(cur); cur = "";
+        if (row.some(v => v.trim() !== "")) rows.push(row);
+        row = [];
+      } else cur += c;
+    }
+    row.push(cur); if (row.some(v => v.trim() !== "")) rows.push(row);
+    return rows;
+  }
+
+  const SERIES_HINT = /\b(season|series|part|volume|vol\.|chapter|book|collection|episode|limited series|miniseries)\b/i;
+  function splitTitle(t) {
+    t = t.trim();
+    const parts = t.split(": ");
+    if (parts.length >= 3) return { name: parts[0], kind: "series", ep: parts.slice(1).join(": ") };
+    if (parts.length === 2 && SERIES_HINT.test(parts[1])) return { name: parts[0], kind: "series", ep: parts[1] };
+    return { name: t, kind: "film", ep: null };
+  }
+  function durSecs(d) {
+    const p = String(d || "").split(":").map(Number);
+    if (p.length !== 3 || p.some(isNaN)) return 0;
+    return p[0] * 3600 + p[1] * 60 + p[2];
+  }
+
+  function detect(rows) {
+    if (!rows.length) throw new Error("The file is empty.");
+    const head = rows[0].map(h => h.trim().toLowerCase());
+    if (head.includes("duration") && head.includes("title") && head.includes("start time")) return "full";
+    if (head.includes("title")) return "quick";
+    throw new Error("This doesn't look like a Netflix history file. Expected a column called Title. Check you picked NetflixViewingHistory.csv or ViewingActivity.csv.");
+  }
+
+  function load(text, opts = {}) {
+    const rows = parseCSV(text);
+    const format = detect(rows);
+    const head = rows[0].map(h => h.trim().toLowerCase());
+    const idx = n => head.indexOf(n);
+    const body = rows.slice(1);
+    state.format = format; state.isSample = !!opts.sample;
+    if (format === "full") {
+      const iP = idx("profile name"), iT = idx("title"), iD = idx("duration"), iS = idx("start time"), iX = idx("supplemental video type");
+      state.rows = body.filter(r => r[iT] && !(iX >= 0 && (r[iX] || "").trim())).map(r => ({
+        profile: iP >= 0 ? r[iP].trim() : "", title: r[iT], secs: durSecs(r[iD]), when: Date.parse((r[iS] || "").replace(" ", "T") + "Z") || 0,
+      }));
+      const counts = {};
+      state.rows.forEach(r => counts[r.profile] = (counts[r.profile] || 0) + 1);
+      state.profiles = Object.keys(counts).sort((a, b) => counts[b] - counts[a]);
+      state.profile = state.profiles[0] || "";
+    } else {
+      const iT = idx("title");
+      // Quick export lists newest first; use position as recency.
+      state.rows = body.filter(r => r[iT]).map((r, i) => ({ profile: "", title: r[iT], secs: null, when: -i }));
+      state.profiles = []; state.profile = "";
+    }
+    if (!state.rows.length) throw new Error("No viewing rows found in that file.");
+    try { if (!opts.sample) localStorage.setItem(SAVE_KEY, text); } catch (e) {}
+    buildTitles();
+    go("review");
+  }
+
+  function buildTitles() {
+    const map = new Map();
+    const rows = state.format === "full" ? state.rows.filter(r => r.profile === state.profile) : state.rows;
+    for (const r of rows) {
+      if (state.format === "full" && r.secs < 60) continue;
+      const s = splitTitle(r.title);
+      const key = s.kind + "|" + s.name.toLowerCase();
+      let t = map.get(key);
+      if (!t) { t = { name: s.name, kind: s.kind, epSet: new Map(), secs: 0, last: r.when, n: 0 }; map.set(key, t); }
+      t.n++; t.last = Math.max(t.last, r.when);
+      if (r.secs != null) t.secs += r.secs;
+      if (s.ep) t.epSet.set(s.ep, (t.epSet.get(s.ep) || 0) + (r.secs || 0));
+    }
+    state.titles = [...map.values()].map(t => {
+      let eps = t.epSet.size, watched;
+      if (state.format === "full") {
+        if (t.kind === "series") {
+          const solid = [...t.epSet.values()].filter(v => v >= 600).length; // ≥10 min of an episode
+          eps = solid || eps;
+          watched = solid >= 2;
+        } else watched = t.secs >= 45 * 60; // most films run 90–150 min
+      } else {
+        watched = t.kind === "series" ? eps >= 2 : true;
+      }
+      return { name: t.name, kind: t.kind, eps, mins: t.secs ? Math.round(t.secs / 60) : null, last: t.last, watched };
+    }).sort((a, b) => b.last - a.last);
+  }
+
+  /* ---------- review ---------- */
+  function renderReview() {
+    $("#fmt-label").textContent = state.format === "full" ? "Full data · with watch time" : "Quick history · titles only";
+    $("#sample-flag").hidden = !state.isSample;
+    const pw = $("#profile-wrap");
+    pw.hidden = state.profiles.length < 2;
+    if (!pw.hidden) {
+      const sel = $("#profile"); sel.innerHTML = "";
+      state.profiles.forEach(p => { const o = document.createElement("option"); o.value = p; o.textContent = p || "(no name)"; sel.append(o); });
+      sel.value = state.profile;
+    }
+    const T = state.titles;
+    const series = T.filter(t => t.kind === "series"), films = T.filter(t => t.kind === "film");
+    const stats = [
+      [T.filter(t => t.watched).length, "titles counted as watched"],
+      [series.length, "series"],
+      [films.length, "films"],
+      [T.filter(t => !t.watched).length, "tried and dropped"],
+    ];
+    $("#stats").innerHTML = stats.map(([n, l]) => `<div class="stat"><b>${n}</b><span class="muted">${l}</span></div>`).join("");
+    const chips = $("#chips"); chips.innerHTML = "";
+    const LIMIT = 48;
+    const list = state.showAllChips ? T : T.slice(0, LIMIT);
+    list.forEach(t => {
+      const b = document.createElement("button");
+      b.className = "chip" + (t.watched ? " w" : "");
+      b.type = "button";
+      b.setAttribute("aria-pressed", t.watched);
+      const label = document.createElement("span"); label.textContent = t.name;
+      const s = document.createElement("small");
+      s.textContent = t.kind === "series" ? (t.eps ? t.eps + " ep" : "series") : (t.mins ? t.mins + " min" : "film");
+      b.append(label, s);
+      b.title = t.watched ? "Counted as watched. Tap to mark as tried." : "Only tried. Tap to count as watched.";
+      b.onclick = () => { t.watched = !t.watched; renderReview(); };
+      chips.append(b);
+    });
+    const more = $("#more-chips");
+    more.hidden = T.length <= LIMIT;
+    more.textContent = state.showAllChips ? "Show fewer" : `Show all ${T.length} titles`;
+  }
+  $("#more-chips").onclick = () => { state.showAllChips = !state.showAllChips; renderReview(); };
+  $("#profile").onchange = e => { state.profile = e.target.value; buildTitles(); renderReview(); };
+
+  /* ---------- navigation ---------- */
+  const SECTIONS = ["load", "review", "tune", "duel", "verdict"];
+  function go(step) {
+    SECTIONS.forEach(s => $("#s-" + s).hidden = s !== step);
+    const navStep = step === "verdict" ? "duel" : step;
+    document.querySelectorAll(".steps span").forEach(sp => sp.classList.toggle("on", sp.dataset.step === navStep));
+    if (step === "review") renderReview();
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  }
+
+  /* ---------- load step ---------- */
+  function showLoadErr(msg) { const e = $("#load-err"); e.textContent = msg; e.hidden = !msg; }
+  function readFile(f) {
+    if (!f) return;
+    showLoadErr("");
+    if (/\.zip$/i.test(f.name)) { showLoadErr("That's the zip file. Unzip it first, then upload ViewingActivity.csv from the CONTENT_INTERACTION folder."); return; }
+    const fr = new FileReader();
+    fr.onload = () => { try { load(String(fr.result)); } catch (e) { showLoadErr(e.message); } };
+    fr.onerror = () => showLoadErr("Couldn't read that file. Try choosing it again.");
+    fr.readAsText(f);
+  }
+  $("#file").onchange = e => readFile(e.target.files[0]);
+  const drop = $("#drop");
+  ["dragenter", "dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+  ["dragleave", "drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+  drop.addEventListener("drop", e => readFile(e.dataTransfer.files[0]));
+
+  function selectTab(which) {
+    ["quick", "full"].forEach(w => {
+      $("#tab-" + w).setAttribute("aria-selected", w === which);
+      $("#g-" + w).hidden = w !== which;
+    });
+  }
+  $("#tab-quick").onclick = () => selectTab("quick");
+  $("#tab-full").onclick = () => selectTab("full");
+
+  let saved = null;
+  try { saved = localStorage.getItem(SAVE_KEY); } catch (e) {}
+  if (saved) $("#use-saved").hidden = false;
+  $("#use-saved").onclick = () => { try { load(saved); } catch (e) { showLoadErr(e.message); } };
+
+  const SAMPLE = `Title,Date
+"Kohrra: Season 1: Episode 6","9/28/26"
+"Kohrra: Season 1: Episode 5","9/27/26"
+"Kohrra: Season 1: Episode 4","9/27/26"
+"Kohrra: Season 1: Episode 3","9/26/26"
+"Kohrra: Season 1: Episode 2","9/25/26"
+"Kohrra: Season 1: Episode 1","9/25/26"
+"Glass Onion: A Knives Out Mystery","9/20/26"
+"Emily in Paris: Season 1: Emily in Paris","9/18/26"
+"Dark: Season 2: Beginnings and Endings","9/10/26"
+"Dark: Season 2: Lost and Found","9/09/26"
+"Dark: Season 1: Secrets","9/05/26"
+"Dark: Season 1: Lies","9/05/26"
+"Dark: Season 1: Past and Present","9/06/26"
+"The Platform","8/30/26"
+"Delhi Crime: Season 1: Episode 1","8/22/26"
+"Delhi Crime: Season 1: Episode 2","8/22/26"
+"Delhi Crime: Season 1: Episode 3","8/23/26"
+"Squid Game: Season 1: Red Light, Green Light","8/15/26"
+"Squid Game: Season 1: Hell","8/15/26"
+"Squid Game: Season 1: The Man with the Umbrella","8/16/26"
+"Bulbbul","8/10/26"
+"Money Heist: Part 1: Episode 1","8/02/26"
+"Mindhunter: Season 1: Episode 1","7/28/26"
+"Mindhunter: Season 1: Episode 2","7/28/26"
+"Mindhunter: Season 1: Episode 3","7/29/26"
+"Jaane Jaan","7/20/26"`;
+  $("#use-sample").onclick = () => { showLoadErr(""); load(SAMPLE, { sample: true }); };
+
+  $("#to-tune").onclick = () => {
+    if (!state.titles.some(t => t.watched)) { alertInline("#tune-err", ""); }
+    go("tune");
+  };
+  $("#back-load").onclick = () => go("load");
+  $("#back-review").onclick = () => go("review");
+
+  /* ---------- region ---------- */
+  const REGIONS = ["India","United States","United Kingdom","Canada","Australia","Germany","France","Spain","Italy","Brazil","Mexico","Japan","South Korea","Singapore","Malaysia","Indonesia","Philippines","Thailand","United Arab Emirates","Saudi Arabia","South Africa","Nigeria","Netherlands","Sweden","Poland","Turkey","Argentina","New Zealand","Ireland","Other"];
+  const reg = $("#region");
+  REGIONS.forEach(r => { const o = document.createElement("option"); o.textContent = r; reg.append(o); });
+  try {
+    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || "";
+    const guess = { "Asia/Calcutta":"India","Asia/Kolkata":"India","Europe/London":"United Kingdom","Asia/Tokyo":"Japan","Asia/Seoul":"South Korea","Asia/Singapore":"Singapore","Australia/Sydney":"Australia","Australia/Melbourne":"Australia","Europe/Berlin":"Germany","Europe/Paris":"France","Europe/Madrid":"Spain","Europe/Rome":"Italy","America/Sao_Paulo":"Brazil","America/Mexico_City":"Mexico","Asia/Dubai":"United Arab Emirates","Africa/Johannesburg":"South Africa","Africa/Lagos":"Nigeria","Asia/Jakarta":"Indonesia","Asia/Manila":"Philippines","Asia/Bangkok":"Thailand","Asia/Kuala_Lumpur":"Malaysia","Europe/Dublin":"Ireland","Pacific/Auckland":"New Zealand","America/Toronto":"Canada" }[tz];
+    if (guess) reg.value = guess; else if (tz.startsWith("America/")) reg.value = "United States";
+  } catch (e) {}
+
+  /* ---------- Gemini ---------- */
+  const KEY_STORE = "nextflix.gemini.key", MODEL_STORE = "nextflix.gemini.models";
+  const API = "https://generativelanguage.googleapis.com/v1beta";
+  const gem = { key: null, models: [] };
+  try {
+    gem.key = localStorage.getItem(KEY_STORE) || sessionStorage.getItem(KEY_STORE);
+    gem.models = JSON.parse(localStorage.getItem(MODEL_STORE) || sessionStorage.getItem(MODEL_STORE) || "[]");
+  } catch (e) {}
+
+  // Rank Flash models newest first; stable before preview; Lite last.
+  function rankModels(list) {
+    const ver = n => { const m = n.match(/gemini-(\d+)(?:\.(\d+))?/); return m ? (+m[1]) * 100 + (+(m[2] || 0)) : 0; };
+    return list
+      .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
+      .map(m => m.name.replace(/^models\//, ""))
+      .filter(n => /^gemini-[\d.]+-flash/.test(n) && !/(image|tts|audio|live|embedding|thinking-exp|computer)/i.test(n))
+      .sort((a, b) => {
+        const lite = n => /lite/.test(n) ? 1 : 0, prev = n => /(preview|exp)/.test(n) ? 1 : 0;
+        return lite(a) - lite(b) || ver(b) - ver(a) || prev(a) - prev(b) || a.length - b.length;
+      })
+      .slice(0, 6);
+  }
+
+  async function gfetch(url, body, signal) {
+    let res;
+    try {
+      res = await fetch(url, {
+        method: body ? "POST" : "GET", signal,
+        headers: Object.assign({ "x-goog-api-key": gem.key }, body ? { "Content-Type": "application/json" } : {}),
+        body: body ? JSON.stringify(body) : undefined,
+      });
+    } catch (e) {
+      if (e && e.name === "AbortError") throw { code: "cancelled" };
+      throw { code: "network" };
+    }
+    let data = null; try { data = await res.json(); } catch (e) {}
+    if (!res.ok) {
+      const msg = (data && data.error && data.error.message) || "";
+      if (res.status === 400 && /api key/i.test(msg)) throw { code: "bad_key" };
+      if (res.status === 401 || res.status === 403) throw { code: "bad_key", msg };
+      if (res.status === 429) throw { code: "rate_limited", msg };
+      if (res.status === 404) throw { code: "no_model", msg };
+      throw { code: "upstream", status: res.status, msg };
+    }
+    return data;
+  }
+
+  async function connectKey(key, remember) {
+    gem.key = key;
+    const data = await gfetch(`${API}/models?pageSize=200`);
+    const models = rankModels((data && data.models) || []);
+    if (!models.length) throw { code: "no_model" };
+    gem.models = models;
+    try {
+      [localStorage, sessionStorage].forEach(s => { s.removeItem(KEY_STORE); s.removeItem(MODEL_STORE); });
+      const s = remember ? localStorage : sessionStorage;
+      s.setItem(KEY_STORE, key); s.setItem(MODEL_STORE, JSON.stringify(models));
+    } catch (e) {}
+  }
+
+  function renderKey() {
+    const ok = !!(gem.key && gem.models.length);
+    $("#key-setup").hidden = ok;
+    $("#key-ok").hidden = !ok;
+    if (ok) $("#key-model").textContent = gem.models[0];
+  }
+  renderKey();
+
+  $("#key-save").onclick = async () => {
+    const k = $("#key-input").value.trim();
+    alertInline("#key-err", "");
+    if (!k) { alertInline("#key-err", "Paste your key first."); return; }
+    const btn = $("#key-save"); btn.disabled = true; btn.textContent = "Checking…";
+    try { await connectKey(k, $("#key-remember").checked); $("#key-input").value = ""; renderKey(); }
+    catch (e) { gem.key = null; gem.models = []; alertInline("#key-err", errCopy(e)); }
+    finally { btn.disabled = false; btn.textContent = "Connect"; }
+  };
+  $("#key-input").addEventListener("keydown", e => { if (e.key === "Enter") $("#key-save").click(); });
+  $("#key-forget").onclick = () => {
+    gem.key = null; gem.models = [];
+    try { [localStorage, sessionStorage].forEach(s => { s.removeItem(KEY_STORE); s.removeItem(MODEL_STORE); }); } catch (e) {}
+    renderKey();
+  };
+
+  const ERR = {
+    bad_key: "Google didn't accept that key. Copy it again from aistudio.google.com/apikey and check nothing is missing.",
+    rate_limited: "Your free Gemini quota is used up for now. It resets daily, or wait a minute if you made many requests quickly.",
+    network: "Couldn't reach Google. Check your connection, or turn off an ad blocker for this page, and try again.",
+    no_model: "No suitable Gemini model is available for this key. Try creating a new key.",
+    invalid_json: "Gemini's answer came back in the wrong shape. Try again.",
+    blocked: "Gemini wouldn't answer that request. Try changing the note in \"Anything else?\".",
+    empty: "Gemini returned nothing. Try again.",
+  };
+  const errCopy = e => ERR[e && e.code] || "Something went wrong reaching Gemini. Try again.";
+  function alertInline(sel, msg) { const el = $(sel); el.textContent = msg; el.hidden = !msg; }
+
+  function historyText() {
+    const W = state.titles.filter(t => t.watched), D = state.titles.filter(t => !t.watched);
+    const fmt = t => t.kind === "series"
+      ? `${t.name} (series, ${t.eps || "?"} episodes${t.mins ? ", " + t.mins + " min total" : ""})`
+      : `${t.name} (film${t.mins ? ", " + t.mins + " min watched" : ""})`;
+    const ws = W.filter(t => t.kind === "series").slice(0, 160).map(fmt);
+    const wf = W.filter(t => t.kind === "film").slice(0, 120).map(fmt);
+    const dr = D.slice(0, 60).map(fmt);
+    return `WATCHED SERIES (most recent first):\n${ws.join("\n") || "none"}\n\nWATCHED FILMS (most recent first):\n${wf.join("\n") || "none"}\n\nTRIED AND DROPPED (treat as mild dislikes):\n${dr.join("\n") || "none"}`;
+  }
+  function moodText() {
+    const v = n => (document.querySelector(`input[name=${n}]:checked`) || {}).value;
+    const extra = $("#extra").value.trim();
+    return `Tonight: ${v("time")}; watching ${v("who")}; mood: ${v("mood")}; format: ${v("kind")}. Netflix country: ${reg.value}.${extra ? " Viewer's note: " + extra.slice(0, 300) : ""}`;
+  }
+  const CARD_SHAPE = `{"title": string (exact Netflix title), "year": number, "kind": "Series" | "Film", "length": string (e.g. "2 seasons · 16 eps" or "1h 52m"), "language": string, "genres": [up to 3 short strings], "premise": string (max 22 words, no spoilers), "why": string (max 18 words, name 1-2 titles from their history it connects to), "contrast": string (max 9 words, how it differs from the pick it's up against; "" for an opening pair)}`;
+
+  function rulesText(d) {
+    const shown = [...d.shown].slice(-80).join("; ");
+    const out = [...d.excluded].slice(-80).join("; ");
+    const log = d.log.slice(-10).map((r, i) => `Round ${i + 1}: "${r.win}" beat "${r.lose}"`).join("\n");
+    return `You are helping one person pick what to watch on Netflix tonight through a series of head-to-head choices.
+
+${historyText()}
+
+${moodText()}
+
+RULES
+- Only suggest titles you believe are on Netflix in ${reg.value} right now. Favour well-established catalog titles over ones you're unsure about.
+- Never suggest anything in their watched or tried lists, or anything already shown: ${shown || "none yet"}.
+- Also avoid: ${out || "nothing yet"}.
+- Fit tonight's time, company, mood and format.
+- Match taste from the history, but mix in titles they might not find on their own. Don't just suggest the most famous show in a genre.
+${log ? "\nCHOICES SO FAR (the winner reveals what they want tonight):\n" + log : ""}`;
+  }
+
+  function parseJSON(text) {
+    const t = text.trim().replace(/^```(?:json)?\s*/i, "").replace(/```\s*$/, "");
+    try { return JSON.parse(t); } catch (e) {}
+    const a = t.indexOf("{"), b = t.lastIndexOf("}");
+    if (a >= 0 && b > a) { try { return JSON.parse(t.slice(a, b + 1)); } catch (e) {} }
+    throw { code: "invalid_json" };
+  }
+
+  // Try the best model first; move down the list if a model is missing or out of free quota.
+  async function ask(prompt, signal) {
+    if (!gem.key || !gem.models.length) throw { code: "unavailable" };
+    let last;
+    for (const model of gem.models) {
+      try {
+        const data = await gfetch(`${API}/models/${encodeURIComponent(model)}:generateContent`, {
+          contents: [{ role: "user", parts: [{ text: prompt + "\n\nReply with the JSON only." }] }],
+          generationConfig: { responseMimeType: "application/json", temperature: 0.9 },
+        }, signal);
+        const cand = data && data.candidates && data.candidates[0];
+        if (!cand) throw { code: data && data.promptFeedback && data.promptFeedback.blockReason ? "blocked" : "empty" };
+        if (cand.finishReason === "SAFETY" || cand.finishReason === "PROHIBITED_CONTENT") throw { code: "blocked" };
+        const text = ((cand.content && cand.content.parts) || []).filter(p => !p.thought && p.text).map(p => p.text).join("");
+        if (!text.trim()) throw { code: "empty" };
+        return parseJSON(text);
+      } catch (e) {
+        if (e && (e.code === "rate_limited" || e.code === "no_model")) { last = e; continue; }
+        throw e;
+      }
+    }
+    throw last || { code: "upstream" };
+  }
+
+  const valid = c => c && typeof c.title === "string" && c.title.trim();
+  function clean(c) {
+    return {
+      title: String(c.title).trim(), year: c.year || "", kind: c.kind === "Film" ? "Film" : "Series",
+      length: c.length || "", language: c.language || "", genres: Array.isArray(c.genres) ? c.genres.slice(0, 3).map(String) : [],
+      premise: c.premise || "", why: c.why || "", contrast: c.contrast || "",
+    };
+  }
+
+  /* ---------- duel engine ---------- */
+  function newDuel() {
+    return { left: null, right: null, held: null, round: 0, log: [], shown: new Set(), excluded: new Set(), spares: [], prefetch: null, beaten: [], busy: false, ctl: null };
+  }
+  const key = c => c.title.toLowerCase();
+  function markShown(c) { state.duel.shown.add(c.title); }
+  function takeSpare() {
+    const d = state.duel;
+    while (d.spares.length) {
+      const s = d.spares.shift();
+      if (!d.shown.has(s.title) && !d.excluded.has(s.title)) return s;
+    }
+    return null;
+  }
+
+  async function opening() {
+    const d = state.duel;
+    showThinking("Reading your history and picking an opening pair…");
+    d.ctl = new AbortController();
+    const prompt = rulesText(d) + `
+
+TASK: Give an opening pair that are clearly different from each other (e.g. different genres or tones), both strong fits, plus 4 spare picks that also fit and differ from the pair.
+Reply with only JSON: {"left": CARD, "right": CARD, "spares": [CARD, CARD, CARD, CARD]} where CARD is ${CARD_SHAPE}`;
+    try {
+      const r = await ask(prompt, d.ctl.signal);
+      if (state.duel !== d) return;
+      if (!valid(r && r.left) || !valid(r.right)) throw { code: "invalid_json" };
+      d.left = clean(r.left); d.right = clean(r.right);
+      d.spares = (Array.isArray(r.spares) ? r.spares : []).filter(valid).map(clean);
+      markShown(d.left); markShown(d.right);
+      renderDuel(); prefetch();
+    } catch (e) { if (e && e.code === "cancelled") return; duelError(e, opening); }
+  }
+
+  // While the viewer decides, fetch the next challenger for both outcomes in one call.
+  function prefetch() {
+    const d = state.duel;
+    if (d.prefetch && d.prefetch.ctl) d.prefetch.ctl.abort();
+    const L = d.left, R = d.right;
+    const ctl = new AbortController();
+    const prompt = rulesText(d) + `
+
+CURRENT PAIR: "${L.title}" vs "${R.title}". The viewer is choosing now.
+TASK: For each possible winner, give the next challenger. A challenger keeps most of what makes the winner appealing but changes ONE thing (tone, genre, pace, language, format or era) so the choice tells us something new. Say what changed in "contrast". Also give 3 spare picks that fit tonight and differ from both.
+Reply with only JSON: {"ifLeftWins": CARD, "ifRightWins": CARD, "spares": [CARD, CARD, CARD]} where CARD is ${CARD_SHAPE}`;
+    const p = { pair: L.title + "|" + R.title, ctl, done: false, result: null, error: null, waiters: [] };
+    p.promise = ask(prompt, ctl.signal).then(r => {
+      if (!valid(r && r.ifLeftWins) || !valid(r.ifRightWins)) throw { code: "invalid_json" };
+      p.result = { L: clean(r.ifLeftWins), R: clean(r.ifRightWins), spares: (Array.isArray(r.spares) ? r.spares : []).filter(valid).map(clean) };
+    }).catch(e => { p.error = e; }).finally(() => { p.done = true; });
+    d.prefetch = p;
+  }
+
+  async function choose(side) {
+    const d = state.duel;
+    if (d.busy || !d.left) return;
+    d.busy = true;
+    const win = side === "L" ? d.left : d.right, lose = side === "L" ? d.right : d.left;
+    d.log.push({ win: win.title, lose: lose.title });
+    d.beaten.unshift(lose);
+    d.held = win; d.round++;
+    if (d.round >= ROUNDS) { d.busy = false; return verdict(); }
+    const p = d.prefetch;
+    if (p && !p.done) { showThinking(`Keeping “${win.title}”. Finding its next challenger…`); await p.promise; }
+    if (state.duel !== d) return;
+    if (p && p.result) {
+      d.spares = p.result.spares.concat(d.spares);
+      let next = side === "L" ? p.result.L : p.result.R;
+      if (d.shown.has(next.title) || d.excluded.has(next.title)) next = takeSpare();
+      if (next) { setPair(win, next); d.busy = false; return; }
+    }
+    d.busy = false;
+    await freshChallenger(win);
+  }
+
+  async function freshChallenger(held) {
+    const d = state.duel;
+    showThinking(`Finding a challenger for “${held.title}”…`);
+    d.ctl = new AbortController();
+    const prompt = rulesText(d) + `
+
+CURRENT PICK: "${held.title}".
+TASK: Give one challenger that keeps most of what makes the current pick appealing but changes ONE thing, plus 3 spare picks.
+Reply with only JSON: {"challenger": CARD, "spares": [CARD, CARD, CARD]} where CARD is ${CARD_SHAPE}`;
+    try {
+      const r = await ask(prompt, d.ctl.signal);
+      if (state.duel !== d) return;
+      if (!valid(r && r.challenger)) throw { code: "invalid_json" };
+      d.spares = (Array.isArray(r.spares) ? r.spares : []).filter(valid).map(clean).concat(d.spares);
+      setPair(held, clean(r.challenger));
+    } catch (e) { if (e && e.code === "cancelled") return; duelError(e, () => freshChallenger(held)); }
+  }
+
+  function setPair(held, challenger) {
+    const d = state.duel;
+    d.left = held; d.right = challenger;
+    markShown(held); markShown(challenger);
+    renderDuel(); prefetch();
+  }
+
+  // "Seen it" / "Not tonight" on one card
+  function replace(side, reason) {
+    const d = state.duel;
+    if (d.busy) return;
+    const gone = side === "L" ? d.left : d.right;
+    d.excluded.add(gone.title + (reason === "seen" ? " (already seen)" : " (not tonight)"));
+    if (gone === d.held) d.held = null;
+    const s = takeSpare();
+    if (s) {
+      if (side === "L") d.left = s; else d.right = s;
+      markShown(s); renderDuel(); prefetch(); return;
+    }
+    const keep = side === "L" ? d.right : d.left;
+    freshChallenger(keep);
+  }
+
+  function neither() {
+    const d = state.duel;
+    if (d.busy || !d.left) return;
+    d.excluded.add(d.left.title + " (rejected)"); d.excluded.add(d.right.title + " (rejected)");
+    d.held = null;
+    const a = takeSpare(), b = takeSpare();
+    if (a && b) { d.left = a; d.right = b; markShown(a); markShown(b); renderDuel(); prefetch(); return; }
+    if (d.prefetch && d.prefetch.ctl) d.prefetch.ctl.abort();
+    opening();
+  }
+
+  /* ---------- duel rendering ---------- */
+  function showThinking(msg) {
+    $("#arena-wrap").innerHTML = `<div class="thinking"><div class="reel" aria-hidden="true"></div><p></p><p class="muted" style="font-size:.85rem">This usually takes 10–40 seconds.</p></div>`;
+    $("#arena-wrap p").textContent = msg;
+    $("#duel-foot").hidden = true;
+    alertInline("#duel-err", "");
+  }
+  function duelError(e, retry) {
+    const msg = e && e.code === "unavailable"
+      ? "Connect your free Gemini key first. It's on the \"Tonight\" screen."
+      : errCopy(e);
+    $("#arena-wrap").innerHTML = "";
+    alertInline("#duel-err", msg);
+    const row = document.createElement("div"); row.className = "row";
+    if (!e || !["unavailable", "bad_key", "no_model"].includes(e.code)) {
+      const b = document.createElement("button"); b.className = "btn primary"; b.textContent = "Try again"; b.onclick = retry; row.append(b);
+    }
+    const back = document.createElement("button"); back.className = "btn ghost"; back.textContent = "Change tonight's answers"; back.onclick = () => go("tune"); row.append(back);
+    $("#arena-wrap").append(row);
+    $("#duel-foot").hidden = true;
+  }
+
+  function cardEl(c, side) {
+    const d = state.duel;
+    const held = c === d.held;
+    const el = document.createElement("article");
+    el.className = "card" + (held ? " held" : "");
+    const pick = document.createElement("button");
+    pick.className = "pick"; pick.type = "button";
+    pick.setAttribute("aria-label", `Pick ${c.title}`);
+    const badge = document.createElement("span");
+    badge.className = "badge " + (held ? "held" : "new");
+    badge.textContent = held ? `Your pick · held ${d.round} round${d.round === 1 ? "" : "s"}` : "New";
+    const h = document.createElement("h3"); h.textContent = c.title;
+    const meta = document.createElement("div"); meta.className = "meta";
+    [c.kind, c.year, c.length, c.language].filter(Boolean).forEach(x => { const s = document.createElement("span"); s.textContent = x; meta.append(s); });
+    pick.append(badge, h, meta);
+    if (c.contrast && !held) { const k = document.createElement("p"); k.className = "contrast"; k.textContent = c.contrast; pick.append(k); }
+    const pr = document.createElement("p"); pr.textContent = c.premise; pick.append(pr);
+    if (c.genres.length) { const g = document.createElement("div"); g.className = "meta"; g.textContent = c.genres.join(" · "); pick.append(g); }
+    if (c.why) { const w = document.createElement("p"); w.className = "why"; w.textContent = c.why; pick.append(w); }
+    pick.onclick = () => choose(side);
+    const foot = document.createElement("div"); foot.className = "cardfoot";
+    const seen = document.createElement("button"); seen.className = "btn small ghost"; seen.textContent = "Seen it"; seen.onclick = () => replace(side, "seen");
+    const nt = document.createElement("button"); nt.className = "btn small ghost"; nt.textContent = "Not tonight"; nt.onclick = () => replace(side, "nt");
+    foot.append(seen, nt);
+    el.append(pick, foot);
+    return el;
+  }
+
+  function renderDuel() {
+    const d = state.duel;
+    $("#meter").innerHTML = Array.from({ length: ROUNDS }, (_, i) => `<i class="${i < d.round ? "done" : ""}"></i>`).join("");
+    $("#duel-title").textContent = d.round === 0 ? "Which one tonight?" : `Round ${d.round + 1} of ${ROUNDS}`;
+    const arena = document.createElement("div"); arena.className = "arena";
+    const vs = document.createElement("div"); vs.className = "vs"; vs.textContent = "or";
+    arena.append(cardEl(d.left, "L"), vs, cardEl(d.right, "R"));
+    const wrap = $("#arena-wrap"); wrap.innerHTML = ""; wrap.append(arena);
+    $("#duel-foot").hidden = false;
+    $("#decide").disabled = !d.held;
+    alertInline("#duel-err", "");
+  }
+
+  document.addEventListener("keydown", e => {
+    if ($("#s-duel").hidden || !state.duel || !state.duel.left || $("#duel-foot").hidden) return;
+    if (e.target.closest && e.target.closest("input,select,textarea")) return;
+    if (e.key === "ArrowLeft") choose("L");
+    if (e.key === "ArrowRight") choose("R");
+  });
+  $("#neither").onclick = neither;
+  $("#decide").onclick = () => { if (state.duel && state.duel.held) verdict(); };
+
+  /* ---------- verdict ---------- */
+  function verdict() {
+    const d = state.duel;
+    if (d.prefetch && d.prefetch.ctl) d.prefetch.ctl.abort();
+    const w = d.held;
+    const v = $("#s-verdict"); v.innerHTML = "";
+    const add = (tag, cls, text) => { const el = document.createElement(tag); if (cls) el.className = cls; if (text != null) el.textContent = text; v.append(el); return el; };
+    add("div", "mono", `Your pick after ${d.round} round${d.round === 1 ? "" : "s"}`).style.color = "var(--amber)";
+    add("h2", "", w.title);
+    add("div", "meta", [w.kind, w.year, w.length, w.language].filter(Boolean).join(" · "));
+    add("p", "lede", w.premise);
+    if (w.why) add("p", "muted", w.why);
+    const row = add("div", "row");
+    const a = document.createElement("a"); a.className = "btn primary"; a.textContent = "Find it on Netflix"; a.target = "_blank"; a.rel = "noopener";
+    a.href = "https://www.netflix.com/search?q=" + encodeURIComponent(w.title); a.style.textDecoration = "none";
+    const more = document.createElement("button"); more.className = "btn"; more.textContent = "Play 3 more rounds";
+    more.onclick = () => { go("duel"); state.duel.round = Math.max(0, ROUNDS - 3); freshChallenger(state.duel.held); };
+    const again = document.createElement("button"); again.className = "btn ghost"; again.textContent = "Start over";
+    again.onclick = () => go("tune");
+    row.append(a, more, again);
+    if (d.beaten.length) {
+      add("h3", "", "Also in the running");
+      const list = add("div", "runners");
+      d.beaten.slice(0, 4).forEach(c => {
+        const r = document.createElement("div"); r.className = "runner";
+        const b = document.createElement("b"); b.textContent = c.title;
+        const m = document.createElement("span"); m.className = "meta"; m.textContent = [c.kind, c.year, c.length].filter(Boolean).join(" · ");
+        r.append(b, m); list.append(r);
+      });
+    }
+    go("verdict");
+  }
+
+  /* ---------- start ---------- */
+  $("#start").onclick = async () => {
+    alertInline("#tune-err", "");
+    if (!state.titles.some(t => t.watched)) { alertInline("#tune-err", "Mark at least one title as watched on the previous screen so there's something to go on."); return; }
+    if (!gem.key || !gem.models.length) { alertInline("#tune-err", "Connect your free Gemini key above to get suggestions."); $("#key-input").focus(); return; }
+    if (state.duel && state.duel.ctl) state.duel.ctl.abort();
+    if (state.duel && state.duel.prefetch && state.duel.prefetch.ctl) state.duel.prefetch.ctl.abort();
+    state.duel = newDuel();
+    go("duel");
+    $("#meter").innerHTML = Array.from({ length: ROUNDS }, () => "<i></i>").join("");
+    $("#duel-title").textContent = "Which one tonight?";
+    opening();
+  };
+})();
+</script>
+</body>
+</html>
